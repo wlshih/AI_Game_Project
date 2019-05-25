@@ -1,5 +1,32 @@
 #include "minimax.h"
 
+int Node::evaulationFunction(bool is_black){
+	int score = 0;
+	if(is_black){
+		for(int i=0;i<black.size();i++){
+			if(black[i].first <= 4){score+=black[i].first;}
+			else{score+=10;}
+		}
+		for(int i=0;i<white.size();i++){
+			if(white[i].first >= 3){score-=(7-white[i].first;)}
+			else{score-=10;}
+		}
+		(black.size()-white.size())*5;
+	}
+	else{
+		for(int i=0;i<black.size();i++){
+			if(black[i].first <= 4){score-=black[i].first;}
+			else{score-=10;}
+		}
+		for(int i=0;i<white.size();i++){
+			if(white[i].first >= 3){score+=(7-white[i].first;)}
+			else{score+=10;}
+		}
+		(white.size()-black.size())*5;
+	}
+	return score;
+}
+
 void Node::getBlack() {
 	for(int r=0; r<8; r++) {
 		for(int c=0; c<8; c++) {
