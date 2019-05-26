@@ -3,46 +3,43 @@
 int Node::utilityFunction(bool is_black) {
 	int score = 0;
 	if (is_black) {
-		if (black[0].first >= 6) 
-			score = INT_MAX;
-		else
-			score = INT_MIN;
-		
+		if (black[0].first >= 6) score = INT_MAX;
+		else score = INT_MIN;	
 	}
 	else {
-		if (white[0].first <= 1)
-			score = INT_MAX;
-		else
-			score = INT_MIN;
+		if (white[0].first <= 1) score = INT_MAX;
+		else score = INT_MIN;
 	}
 	val = score; // store to node
+	//printf("Uscore:%d\n", val);
 	return score;
 }
 int Node::evaluationFunction(bool is_black){
 	int score = 0;
 	if(is_black){
 		for(int i=0;i<black.size();i++){
-			if(black[i].first <= 4){score+=black[i].first;}
+			if(black[i].second <= 4){score+=black[i].second;}
 			else{score+=10;}
 		}
 		for(int i=0;i<white.size();i++){
-			if(white[i].first >= 3){score-=(7-white[i].first);}
+			if(white[i].second >= 3){score-=(7-white[i].second);}
 			else{score-=10;}
 		}
 		(black.size()-white.size())*5;
 	}
 	else{
 		for(int i=0;i<black.size();i++){
-			if(black[i].first <= 4){score-=black[i].first;}
+			if(black[i].second <= 4){score-=black[i].second;}
 			else{score-=10;}
 		}
 		for(int i=0;i<white.size();i++){
-			if(white[i].first >= 3){score+=(7-white[i].first);}
+			if(white[i].second >= 3){score+=(7-white[i].second);}
 			else{score+=10;}
 		}
 		(white.size()-black.size())*5;
 	}
 	val = score; // store to node
+	//printf("Escore:%d\n", val);
 	return score;
 }
 
@@ -78,6 +75,10 @@ void Node::getBlack() {
 			}
 		}
 	}
+	/*for (int i = 0; i < black.size(); i++) {
+		printf("(%d, %d) ", black[i].first, black[i].second);
+	}
+	printf(" -black\n");*/
 }
 
 void Node::getWhite() {
@@ -92,11 +93,15 @@ void Node::getWhite() {
 			}
 		}
 	}
+	/*for (int i = 0; i < white.size(); i++) {
+		printf("(%d, %d) ", white[i].first, white[i].second);
+	}
+	printf(" -white\n");*/
 }
 
 // generate all children of next step
 void Node::genChildren() {
-	std::cout << "genChildren" << black.size() << "," << white.size() << std::endl;
+	//printf("genChildren%d,%d\n", black.size(), white.size());
 	if(color == 1) { // black
 		for(int i=0; i<black.size(); i++) {
 			genSteps(black[i].first, black[i].second);
@@ -108,8 +113,8 @@ void Node::genChildren() {
 		}
 	}
 	else std::cerr << "my color not set\n";
-
-	printf("color(%d):%d, depth:%d\n", color, depth);
+	//printBoard(this);
+	//printf("color:%d, child:%d, depth:%d\n", color, child.size(), depth);
 	// for(std::vector<Node*>::iterator it=child.begin(); it!=child.end(); it++) {
 	// 	printBoard(*it);
 	// }
@@ -119,6 +124,7 @@ void Node::genChildren() {
 // move/hop up + down + left + right
 void Node::genSteps(int r, int c) {
 	// move up
+	//printf("genSteps\n");
 	if((r-1) >= 0 && board[r-1][c] == 0) {
 		Node* n = new Node(board);
 		n->board[r][c] = 0;
@@ -280,13 +286,6 @@ void Node::hop(int r, int c) {
 }
 
 
-bool Minimax::cutoff_test(Node *n) {
-	if (n->depth > Depth) {
-		return true;
-	}
-	else
-		return false;
-}
 
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	root = Node(state);
@@ -294,17 +293,20 @@ void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	int max_val = maxVal(&root);
 	std::vector<Node*>::iterator it;
 	for(it=root.child.begin(); it!=root.child.end(); it++) {
+		//printf("%d ", (*it)->val);
 		if((*it)->val == max_val) {
 			step_list = (*it)->step;
 		}
 	}
 	///
-	std::cout << root.child.size() << std::endl;
-	std::cout << max_val << std::endl;
-	printBoard(&root);
+	printf("\nchild #:%d\n", root.child.size());
+	printf("max_val:%d\n", max_val);
+	//printBoard(&root);
 }
 
 int Minimax::maxVal(Node *n) {
+	n->getBlack();
+	n->getWhite();
 	if (n->terminal()) { 
 		return n->utilityFunction(is_black);;
 	}
@@ -316,9 +318,13 @@ int Minimax::maxVal(Node *n) {
 	for (int i = 0; i < n->child.size(); i++) {
 		value = std::max(value, minVal(n->child[i]));
 	}
+	n->val = value; // store to node
+	//printf("maxValue:%d\n", value);
 	return value;
 }
 int Minimax::minVal(Node *n) {
+	n->getBlack();
+	n->getWhite();
 	if (n->terminal()) {
 		return n->utilityFunction(is_black);;
 	}
@@ -330,22 +336,19 @@ int Minimax::minVal(Node *n) {
 	for (int i = 0; i < n->child.size(); i++) {
 		value = std::min(value, maxVal(n->child[i]));
 	}
+	n->val = value; // store to node
+	//printf("minValue:%d\n", value);
 	return value;
+}
+
+bool Minimax::cutoff_test(Node *n) {
+	return (n->depth >= Depth) ? true : false;
 }
 
 std::vector<std::vector<int>> Minimax::getSteplist() {
 	return step_list;
 }
 
-
-// int main() {
-// 	Minimax m(1); // black
-// 	m.buildTree(testBoard());
-// 	m.printStep();
-
-
-// 	return 0;
-// }
 
 /****** for debugging ******/
 
@@ -355,8 +358,12 @@ std::vector<std::vector<int>> testBoard() {
 	for(int i=0; i<8; i++) {
 		ret.push_back(tmp);
 	}
-	ret[0][0] = 1;
-	ret[7][7] = 2;
+	ret[0][0] = 1; ret[2][0] = 1; ret[4][0] = 1; ret[6][0] = 1;
+	ret[1][1] = 1; ret[3][1] = 1; ret[5][1] = 1;
+	ret[2][2] = 1; ret[4][2] = 1;
+	ret[7][7] = 2; ret[5][7] = 2; ret[3][7] = 2; ret[1][7] = 2;
+	ret[6][6] = 2; ret[4][6] = 2; ret[2][6] = 2;
+	ret[5][5] = 2; ret[3][5] = 2;
 	return ret;
 }
 void printBoard(Node* n) {
@@ -370,6 +377,7 @@ void printBoard(Node* n) {
 	printf("- - - - - - - - -\n");
 }
 void Minimax::printStep() {
+	printf("steplist#:%d\n", step_list.size());
 	std::vector<std::vector<int>>::iterator it;
 	for(it=step_list.begin(); it!=step_list.end(); it++) {
 		printf("(%d, %d) ", (*it)[0], (*it)[1]);

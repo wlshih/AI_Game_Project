@@ -4,7 +4,7 @@
 #include <climits>
 #include <iostream>
 
-constexpr auto Depth = 4;
+constexpr auto Depth = 2;
 class Node {
 public:
 	std::vector<std::vector<int>> board;
@@ -18,8 +18,6 @@ public:
 	Node() : color(0), depth(0), val(0) {}
 	Node(std::vector<std::vector<int>> state) {
 		board = state;
-		getBlack();
-		getWhite();
 		color = 0;
 		depth = 0;
 		val = 0;
