@@ -5,8 +5,8 @@
 #include <iostream>
 #include <stack>
 
-constexpr auto Depth = 4;
-constexpr auto Hop_max = 10;
+constexpr auto Depth = 3;
+constexpr auto Hop_max = 4;
 class Node {
 public:
 	std::vector<std::vector<int>> board;
@@ -34,12 +34,12 @@ public:
 	void hop(int, int);
 };
 
-struct hop_node {
+struct HopNode {
 	int r;
 	int c;
 	std::vector<std::vector<int>> board;
 	std::vector<std::vector<int>> step; // step list
-	hop_node(int r, int c, std::vector<std::vector<int>> board, std::vector<std::vector<int>> step) {
+	HopNode(int r, int c, std::vector<std::vector<int>> board, std::vector<std::vector<int>> step) {
 		this->r = r;
 		this->c = c;
 		this->board = board;
@@ -63,6 +63,7 @@ public:
 	std::vector<std::vector<int>> getSteplist();
 	void printStep(); // debug
 };
+
 
 /****** for debugging ******/
 std::vector<std::vector<int>> testBoard();

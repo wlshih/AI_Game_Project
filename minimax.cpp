@@ -189,7 +189,10 @@ void Node::genSteps(int r, int c) {
 		child.push_back(n);
 	}
 
-	// hop(r, c);
+	hop(r, c);
+	//printf("******\n");
+	//printBoard(this);
+
 	/*// hop up
 	if((r-2) >= 0 && board[r-1][c] != 0 && board[r-2][c] == 0) {
 		Node* n = new Node(board);
@@ -269,112 +272,158 @@ void Node::genSteps(int r, int c) {
 }
 
 void Node::hop(int r, int c) {
-	std::stack<hop_node> hop_node_stack;
-	hop_node temp_hop_node(r, c, this->board, this->step);
+	std::stack<HopNode> hop_node_stack;
+	
+	std::vector<std::vector<int>> temp_step;
+	std::vector<int> temp_pos = { r, c }; // the 0th step (current position)
+	temp_step.push_back(temp_pos);
+	
+	HopNode temp_hop_node(r, c, this->board, temp_step);
 	hop_node_stack.push(temp_hop_node);
 
+	// push all posible moves into stack
+	// and nodes from stack to child list
 	while (!hop_node_stack.empty()) {
 		std::vector<std::vector<int>> curBoard;
 		std::vector<std::vector<int>> curStep;
 		std::vector<std::vector<int>> tempBoard;
 		std::vector<std::vector<int>> tempStep;
-		int curR, curC;
-		curR = hop_node_stack.top().r; // row of the expanding node 
-		curC = hop_node_stack.top().c; // col of the expanding node
+		int cnt; // count the number of hops, to limit hops
+		int curR, curC; // row & col. of the expanding node 
+		int preR, preC; // row & col. of the previous step
 		curBoard = hop_node_stack.top().board;
 		curStep = hop_node_stack.top().step;
+		cnt = curStep.size() - 1;
+		curR = hop_node_stack.top().r;
+		curC = hop_node_stack.top().c;
+		preR = (cnt == 0) ? -1 : curStep[cnt - 1][0]; // if no prev step(root), set -1
+		preC = (cnt == 0) ? -1 : curStep[cnt - 1][1]; // if no prev step(root), set -1
 
-		//test if hop up is ok
-		if (curR - 2 >= 0 && board[curR - 1][curC] != 0 && board[curR - 2][curC] == 0) {
+		// pop the current hop node and expand
+		hop_node_stack.pop();
+
+		// but check the hop count, don't expand if reached the max
+		if (cnt >= Hop_max) continue;
+
+		// expand hop range
+		// test if hop up is ok
+		if (curR - 2 >= 0 && board[curR - 1][curC] != 0 && board[curR - 2][curC] == 0
+			&& ((curR - 2) != preR && curC != preC)) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
 			//update tempBoard
+			tempBoard[curR][curC] = 0;
 			tempBoard[curR - 2][curC] = this->color;
-			if (tempBoard[curR - 1][curC] != this->color) { tempBoard[curR - 1][curC] = 0; }
+			tempBoard[curR - 1][curC] = (tempBoard[curR - 1][curC] == this->color) ? this->color : 0;
 			//update tempStep
 			std::vector<int> pos = { curR - 2, curC };
 			tempStep.push_back(pos);
-			//create hop_node & put it into hop_node_stack
-			hop_node temp(curR - 2, curC, tempBoard, tempStep);
+			//create HopNode & put it into hop_node_stack
+			HopNode temp(curR - 2, curC, tempBoard, tempStep);
 			hop_node_stack.push(temp);
+
+			// push new node to child list
+			Node *n = new Node(tempBoard);
+			n->step = tempStep;
+			n->color = this->color;
+			n->depth = this->depth;
+			this->child.push_back(n);
 		}
 
-		//test if hop down is ok
-		if ((curR + 2) <= 7 && board[curR + 1][curC] != 0 && board[curR + 2][curC] == 0) {
+		// test if hop down is ok
+		if ((curR + 2) <= 7 && board[curR + 1][curC] != 0 && board[curR + 2][curC] == 0
+			&& ((curR + 2) != preR && curC != preC)) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
 			//update tempBoard
+			tempBoard[curR][curC] = 0;
 			tempBoard[curR + 2][curC] = this->color;
-			if (tempBoard[curR + 1][curC] != this->color) { tempBoard[curR + 1][curC] = 0; }
+			tempBoard[curR + 1][curC] = (tempBoard[curR + 1][curC] == this->color) ? this->color : 0;
 			//update tempStep
 			std::vector<int> pos = { curR + 2, curC };
 			tempStep.push_back(pos);
-			//create hop_node & put it into hop_node_stack
-			hop_node temp(curR + 2, curC, tempBoard, tempStep);
+			//create HopNode & put it into hop_node_stack
+			HopNode temp(curR + 2, curC, tempBoard, tempStep);
 			hop_node_stack.push(temp);
+
+			// push new node to child list
+			Node *n = new Node(tempBoard);
+			n->step = tempStep;
+			n->color = this->color;
+			n->depth = this->depth;
+			this->child.push_back(n);
 		}
 
-		//test if hop left is ok
-		if (curC - 2 >= 0 && board[curR][curC - 1] != 0 && board[curR][curC - 2] == 0) {
+		// test if hop left is ok
+		if (curC - 2 >= 0 && board[curR][curC - 1] != 0 && board[curR][curC - 2] == 0
+			&& (curR != preR && (curC - 2) != preC)) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
 			//update tempBoard
+			tempBoard[curR][curC] = 0;
 			tempBoard[curR][curC - 2] = this->color;
-			if (tempBoard[curR][curC - 1] != this->color) { tempBoard[curR][curC - 1] = 0; }
+			tempBoard[curR][curC - 1] = (tempBoard[curR][curC - 1] != this->color) ? this->color : 0;
 			//update tempStep
 			std::vector<int> pos = { curR, curC - 2 };
 			tempStep.push_back(pos);
-			//create hop_node & put it into hop_node_stack
-			hop_node temp(curR, curC - 2, tempBoard, tempStep);
+			//create HopNode & put it into hop_node_stack
+			HopNode temp(curR, curC - 2, tempBoard, tempStep);
 			hop_node_stack.push(temp);
+
+			// push new node to child list
+			Node *n = new Node(tempBoard);
+			n->step = tempStep;
+			n->color = this->color;
+			n->depth = this->depth;
+			this->child.push_back(n);
 		}
 
-		//test if hop right is ok
-		if (curC + 2 <= 7 && board[curR][curC + 1] != 0 && board[curR][curC + 2] == 0) {
+		// test if hop right is ok
+		if (curC + 2 <= 7 && board[curR][curC + 1] != 0 && board[curR][curC + 2] == 0
+			&& (curR != preR && (curC + 2) != preC)) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
 			//update tempBoard
+			tempBoard[curR][curC] = 0;
 			tempBoard[curR][curC + 2] = this->color;
-			if (tempBoard[curR][curC + 1] != this->color) { tempBoard[curR][curC + 1] = 0; }
+			tempBoard[curR][curC + 1] = (tempBoard[curR][curC + 1] != this->color) ? this->color : 0;
 			//update tempStep
 			std::vector<int> pos = { curR, curC + 2 };
 			tempStep.push_back(pos);
-			//create hop_node & put it into hop_node_stack
-			hop_node temp(curR, curC + 2, tempBoard, tempStep);
+			//create HopNode & put it into hop_node_stack
+			HopNode temp(curR, curC + 2, tempBoard, tempStep);
 			hop_node_stack.push(temp);
+
+			// push new node to child list
+			Node *n = new Node(tempBoard);
+			n->step = tempStep;
+			n->color = this->color;
+			n->depth = this->depth;
+			this->child.push_back(n);
 		}
-		
-		//create child node by hop_node_stack's top;
-		Node *n = new Node(curBoard);
-		n->step = curStep;
-		n->color = (color == 1) ? 2 : 1;
-		n->depth = depth + 1;
-		this->child.push_back(n);
-		//pop off stack top
-		hop_node_stack.pop();
 	}
+	//printf("hop_stack size:%d\n", hop_node_stack.size());
+	//printf("child_list size:%d\n", child.size());
 }
-
-
 
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	root = Node(state);
 	root.color = (is_black) ? 1 : 2;
 	int max_val = maxVal(&root, INT_MIN, INT_MAX);
+	printf("child #:%d\n", root.child.size());
 	std::vector<Node*>::iterator it;
 	for(it=root.child.begin(); it!=root.child.end(); it++) {
-		//printf("%d ", (*it)->val);
+		printf("%d ", (*it)->val);
 		if((*it)->val == max_val) {
 			step_list = (*it)->step;
 		}
 	}
 	///
-	printf("\nchild #:%d\n", root.child.size());
-	printf("max_val:%d\n", max_val);
+	printf("\nmax_val:%d\n", max_val);
 	//printBoard(&root);
 }
 
