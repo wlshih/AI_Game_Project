@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <climits>
 #include <iostream>
+#include <stack>
 
-constexpr auto Depth = 2;
+constexpr auto Depth = 4;
+constexpr auto Hop_max = 10;
 class Node {
 public:
 	std::vector<std::vector<int>> board;
@@ -32,6 +34,20 @@ public:
 	void hop(int, int);
 };
 
+struct hop_node {
+	int r;
+	int c;
+	std::vector<std::vector<int>> board;
+	std::vector<std::vector<int>> step; // step list
+	hop_node(int r, int c, std::vector<std::vector<int>> board, std::vector<std::vector<int>> step) {
+		this->r = r;
+		this->c = c;
+		this->board = board;
+		this->step = step;
+	}
+};
+
+
 class Minimax {
 private:
 	Node root;
@@ -41,8 +57,8 @@ private:
 public:
 	Minimax(int is_black) : is_black(is_black) {}
 	void buildTree(std::vector<std::vector<int>> state);
-	int maxVal(Node* n);
-	int minVal(Node* n);
+	int maxVal(Node* n, int alpha, int beta);
+	int minVal(Node* n, int alpha, int beta);
 	bool cutoff_test(Node* n);
 	std::vector<std::vector<int>> getSteplist();
 	void printStep(); // debug

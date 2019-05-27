@@ -188,6 +188,8 @@ void Node::genSteps(int r, int c) {
 
 		child.push_back(n);
 	}
+
+	// hop(r, c);
 	/*// hop up
 	if((r-2) >= 0 && board[r-1][c] != 0 && board[r-2][c] == 0) {
 		Node* n = new Node(board);
@@ -267,21 +269,93 @@ void Node::genSteps(int r, int c) {
 }
 
 void Node::hop(int r, int c) {
-	// hop up
-	if((r-2) >= 0 && board[r-1][c] != 0 && board[r-2][c] == 0) {
+	std::stack<hop_node> hop_node_stack;
+	hop_node temp_hop_node(r, c, this->board, this->step);
+	hop_node_stack.push(temp_hop_node);
 
-	}
-	// hop down
-	if((r+2) <= 7 && board[r+1][c] != 0 && board[r+2][c] == 0) {
+	while (!hop_node_stack.empty()) {
+		std::vector<std::vector<int>> curBoard;
+		std::vector<std::vector<int>> curStep;
+		std::vector<std::vector<int>> tempBoard;
+		std::vector<std::vector<int>> tempStep;
+		int curR, curC;
+		curR = hop_node_stack.top().r; // row of the expanding node 
+		curC = hop_node_stack.top().c; // col of the expanding node
+		curBoard = hop_node_stack.top().board;
+		curStep = hop_node_stack.top().step;
+
+		//test if hop up is ok
+		if (curR - 2 >= 0 && board[curR - 1][curC] != 0 && board[curR - 2][curC] == 0) {
+			//assigne value to temp from current
+			tempBoard = curBoard;
+			tempStep = curStep;
+			//update tempBoard
+			tempBoard[curR - 2][curC] = this->color;
+			if (tempBoard[curR - 1][curC] != this->color) { tempBoard[curR - 1][curC] = 0; }
+			//update tempStep
+			std::vector<int> pos = { curR - 2, curC };
+			tempStep.push_back(pos);
+			//create hop_node & put it into hop_node_stack
+			hop_node temp(curR - 2, curC, tempBoard, tempStep);
+			hop_node_stack.push(temp);
+		}
+
+		//test if hop down is ok
+		if ((curR + 2) <= 7 && board[curR + 1][curC] != 0 && board[curR + 2][curC] == 0) {
+			//assigne value to temp from current
+			tempBoard = curBoard;
+			tempStep = curStep;
+			//update tempBoard
+			tempBoard[curR + 2][curC] = this->color;
+			if (tempBoard[curR + 1][curC] != this->color) { tempBoard[curR + 1][curC] = 0; }
+			//update tempStep
+			std::vector<int> pos = { curR + 2, curC };
+			tempStep.push_back(pos);
+			//create hop_node & put it into hop_node_stack
+			hop_node temp(curR + 2, curC, tempBoard, tempStep);
+			hop_node_stack.push(temp);
+		}
+
+		//test if hop left is ok
+		if (curC - 2 >= 0 && board[curR][curC - 1] != 0 && board[curR][curC - 2] == 0) {
+			//assigne value to temp from current
+			tempBoard = curBoard;
+			tempStep = curStep;
+			//update tempBoard
+			tempBoard[curR][curC - 2] = this->color;
+			if (tempBoard[curR][curC - 1] != this->color) { tempBoard[curR][curC - 1] = 0; }
+			//update tempStep
+			std::vector<int> pos = { curR, curC - 2 };
+			tempStep.push_back(pos);
+			//create hop_node & put it into hop_node_stack
+			hop_node temp(curR, curC - 2, tempBoard, tempStep);
+			hop_node_stack.push(temp);
+		}
+
+		//test if hop right is ok
+		if (curC + 2 <= 7 && board[curR][curC + 1] != 0 && board[curR][curC + 2] == 0) {
+			//assigne value to temp from current
+			tempBoard = curBoard;
+			tempStep = curStep;
+			//update tempBoard
+			tempBoard[curR][curC + 2] = this->color;
+			if (tempBoard[curR][curC + 1] != this->color) { tempBoard[curR][curC + 1] = 0; }
+			//update tempStep
+			std::vector<int> pos = { curR, curC + 2 };
+			tempStep.push_back(pos);
+			//create hop_node & put it into hop_node_stack
+			hop_node temp(curR, curC + 2, tempBoard, tempStep);
+			hop_node_stack.push(temp);
+		}
 		
-	}
-	// hop left
-	if((c-2) >= 0 && board[r][c-1] != 0 && board[r][c-2] == 0) {
-		
-	}
-	// hop right
-	if((c+2) >= 0 && board[r][c+1] != 0 && board[r][c+2] == 0) {
-		
+		//create child node by hop_node_stack's top;
+		Node *n = new Node(curBoard);
+		n->step = curStep;
+		n->color = (color == 1) ? 2 : 1;
+		n->depth = depth + 1;
+		this->child.push_back(n);
+		//pop off stack top
+		hop_node_stack.pop();
 	}
 }
 
@@ -290,7 +364,7 @@ void Node::hop(int r, int c) {
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	root = Node(state);
 	root.color = (is_black) ? 1 : 2;
-	int max_val = maxVal(&root);
+	int max_val = maxVal(&root, INT_MIN, INT_MAX);
 	std::vector<Node*>::iterator it;
 	for(it=root.child.begin(); it!=root.child.end(); it++) {
 		//printf("%d ", (*it)->val);
@@ -304,7 +378,7 @@ void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	//printBoard(&root);
 }
 
-int Minimax::maxVal(Node *n) {
+int Minimax::maxVal(Node *n, int alpha, int beta) {
 	n->getBlack();
 	n->getWhite();
 	if (n->terminal()) { 
@@ -316,13 +390,18 @@ int Minimax::maxVal(Node *n) {
 	n->genChildren();
 	int value = INT_MIN;
 	for (int i = 0; i < n->child.size(); i++) {
-		value = std::max(value, minVal(n->child[i]));
+		value = std::max(value, minVal(n->child[i], alpha, beta));
+		if (value >= beta) {
+			n->val = value;
+			return value;
+		}
+		alpha = std::max(value, alpha);
 	}
 	n->val = value; // store to node
 	//printf("maxValue:%d\n", value);
 	return value;
 }
-int Minimax::minVal(Node *n) {
+int Minimax::minVal(Node *n, int alpha, int beta) {
 	n->getBlack();
 	n->getWhite();
 	if (n->terminal()) {
@@ -334,7 +413,12 @@ int Minimax::minVal(Node *n) {
 	n->genChildren();
 	int value = INT_MAX;
 	for (int i = 0; i < n->child.size(); i++) {
-		value = std::min(value, maxVal(n->child[i]));
+		value = std::min(value, maxVal(n->child[i], alpha, beta));
+		if (value <= alpha) {
+			n->val = value;
+			return value;
+		}
+		beta = std::min(value, beta);
 	}
 	n->val = value; // store to node
 	//printf("minValue:%d\n", value);
