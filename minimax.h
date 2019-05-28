@@ -7,8 +7,8 @@
 #include "timer.h"
 
 constexpr auto Depth = 3;
-constexpr auto Hop_max = 4;
-constexpr auto Time_lim = 999;
+constexpr auto Hop_max = 5;
+constexpr auto Time_lim = 3.9;
 class Node {
 public:
 	std::vector<std::vector<int>> board;

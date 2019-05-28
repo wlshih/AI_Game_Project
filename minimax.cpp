@@ -18,13 +18,47 @@ int Node::utilityFunction(bool is_black) {
 	// compare number of pieces in the green area
 	if (black_cnt > white_cnt) score = (is_black) ? INT_MAX : INT_MIN;
 	else if (black_cnt < white_cnt) score = (is_black) ? INT_MIN : INT_MAX;
-	else score = 0;
+	else score = evaluationFunction(is_black);
 
 	this->val = score; // store to node
 	//printf("Uscore:%d\n", val);
 	return score;
 }
 int Node::evaluationFunction(bool is_black){
+
+
+	// (1) basic score(white zone): black(7, 0)->(0, 7), white(7, 7)->(0, 0)
+	//     move front +2, move side +1
+	// (2) in green zone, get 50
+	// (3) final score = my score - enemy score
+
+	int white_score = 0;
+	int black_score = 0;
+	const int slope = 5;
+	for (int i = 0; i < black.size(); i++) {
+		if (black[i].second >= 6) {
+			black_score += 50;
+		}
+		else {
+			black_score += (7 - black[i].first) + slope * black[i].second;
+		}
+	}
+	for (int i = 0; i < white.size(); i++) {
+		if (white[i].second <= 1) {
+			white_score += 50;
+		}
+		else {
+			white_score += white[i].first + slope * (7 - white[i].second);
+		}
+	}
+
+	//black_score += black.size() * 10;
+	//white_score += white.size() * 10;
+
+	if (is_black) return (black_score - white_score);
+	else return (white_score - black_score);
+
+/*
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	// How to get score                                                                 //
@@ -35,11 +69,11 @@ int Node::evaluationFunction(bool is_black){
 	// (4)get close to left side(for Black: row 0,1,2 ; for White row 5,6,7), get  5    //
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	int score = 0;
 	const int goal_score = 100;
 	const int moving_forward_score = 10;
 	const int eat_score = 10;
 	const int left_score = 5;
+
 	// playing as Black
 	if (is_black) {
 		for (int i = 0; i < black.size(); i++) {
@@ -69,7 +103,7 @@ int Node::evaluationFunction(bool is_black){
 		score += (white.size() - black.size()) * eat_score;
 	}
 	this->val = score; // store evluation value to node
-	return score;
+	return score;*/
 }
 
 // set leaf and return is terminal or not
@@ -153,13 +187,20 @@ void Node::getWhite() {
 }
 
 // generate all children of next step
+// generate hop node first, then move
 void Node::genChildren() {
 	if(color == 1) { // black
+		for (int i = 0; i < black.size(); i++) {
+			hop(black[i].first, black[i].second);
+		}
 		for(int i=0; i<black.size(); i++) {
 			genSteps(black[i].first, black[i].second);
 		}
 	}
 	else if (color == 2) { // white
+		for (int i = 0; i < white.size(); i++) {
+			hop(white[i].first, white[i].second);
+		}
 		for(int i=0; i<white.size(); i++) {
 			genSteps(white[i].first, white[i].second);
 		}
@@ -175,7 +216,6 @@ void Node::genChildren() {
 // generate all posible steps of a piece and store to list
 // move/hop up + down + left + right
 void Node::genSteps(int r, int c) {
-	hop(r, c);
 	// move up
 	//printf("genSteps\n");
 	if((r-1) >= 0 && board[r-1][c] == 0) {
@@ -302,7 +342,7 @@ void Node::hop(int r, int c) {
 			Node *n = new Node(tempBoard);
 			n->step = tempStep;
 			n->color = this->color;
-			n->depth = this->depth;
+			n->depth = this->depth+1;
 			this->child.push_back(n);
 		}
 
@@ -327,7 +367,7 @@ void Node::hop(int r, int c) {
 			Node *n = new Node(tempBoard);
 			n->step = tempStep;
 			n->color = this->color;
-			n->depth = this->depth;
+			n->depth = this->depth+1;
 			this->child.push_back(n);
 		}
 
@@ -352,7 +392,7 @@ void Node::hop(int r, int c) {
 			Node *n = new Node(tempBoard);
 			n->step = tempStep;
 			n->color = this->color;
-			n->depth = this->depth;
+			n->depth = this->depth+1;
 			this->child.push_back(n);
 		}
 
@@ -377,7 +417,7 @@ void Node::hop(int r, int c) {
 			Node *n = new Node(tempBoard);
 			n->step = tempStep;
 			n->color = this->color;
-			n->depth = this->depth;
+			n->depth = this->depth+1;
 			this->child.push_back(n);
 		}
 	}
@@ -419,28 +459,28 @@ bool Node::isLeaf() {
 
 // set root
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
-	printf("<---6--->\n");
+	//printf("<---14--->\n");
 	t.setTime(Time_lim);
 
 	root = Node(state);
 	root.color = (is_black) ? 1 : 2;
 
 	root.setVal(is_black);
-	printf("root val:%d\n", root.val);
+	//printf("root val:%d\n", root.val);
 
 	int max_val = maxVal(&root, INT_MIN, INT_MAX);
-	printf("child #:%d\n", root.child.size());
+	//printf("child #:%d\n", root.child.size());
 
 	std::vector<Node*>::iterator it;
 	for(it=root.child.begin(); it!=root.child.end(); it++) {
-		printf("%d ", (*it)->val);
+		//printf("%d ", (*it)->val);
 		if((*it)->val == max_val) {
 			step_list = (*it)->step;
 		}
 	}
 	///
-	printf("\nmax_val:%d\n", max_val);
-	printf("Timer: %fs\n", t.getElapsed());
+	//printf("\nmax_val:%d\n", max_val);
+	//printf("Timer: %fs\n", t.getElapsed());
 	//printBoard(&root);
 }
 
@@ -537,16 +577,16 @@ std::vector<std::vector<int>> testBoard() {
 	for(int i=0; i<8; i++) {
 		ret.push_back(tmp);
 	}
-	ret[0][0] = 1; ret[2][0] = 1; ret[4][0] = 1; ret[6][0] = 1;
+	/*ret[0][0] = 1; ret[2][0] = 1; ret[4][0] = 1; ret[6][0] = 1;
 	ret[1][1] = 1; ret[3][1] = 1; ret[5][1] = 1;
 	ret[2][2] = 1; ret[4][2] = 1;
 	ret[7][7] = 2; ret[5][7] = 2; ret[3][7] = 2; ret[1][7] = 2;
 	ret[6][6] = 2; ret[4][6] = 2; ret[2][6] = 2;
-	ret[5][5] = 2; ret[3][5] = 2;
-	/*ret[0][0] = 1; ret[2][0] = 1; ret[4][0] = 1; ret[6][0] = 1;
-	ret[1][1] = 1; ret[3][1] = 1; ret[5][1] = 1;
-	ret[2][2] = 1; ret[4][2] = 1;
-	ret[1][0] = 2; ret[5][7] = 2;*/
+	ret[5][5] = 2; ret[3][5] = 2;*/
+	ret[0][0] = 1; ret[0][7] = 1;
+	ret[1][1] = 1; ret[2][1] = 1; ret[3][2] = 1;
+	ret[6][4] = 1;
+	ret[4][2] = 2; ret[7][0] = 2;
 	return ret;
 }
 void printBoard(Node* n) {
