@@ -8,7 +8,8 @@ private:
 	double elapsed;
 public:
 	Timer() {}
-	Timer(int lim);
-	void setTime(int lim);
+	Timer(double lim);
+	void setTime(double lim);
 	bool timeUp();
+	double getElapsed();
 };

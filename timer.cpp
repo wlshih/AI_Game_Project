@@ -1,9 +1,9 @@
 #include "timer.h"
 
-Timer::Timer(int lim) {
+Timer::Timer(double lim) {
 	setTime(lim);
 }
-void Timer::setTime(int lim) {
+void Timer::setTime(double lim) {
 	start = clock();
 	limit = lim;
 }
@@ -14,4 +14,6 @@ bool Timer::timeUp() {
 	return (elapsed > limit);
 }
 
-
+double Timer::getElapsed() {
+	return this->elapsed;
+}

@@ -6,9 +6,9 @@
 #include <stack>
 #include "timer.h"
 
-constexpr auto Depth = 2;
+constexpr auto Depth = 3;
 constexpr auto Hop_max = 4;
-constexpr auto Time_lim = 4.5;
+constexpr auto Time_lim = 999;
 class Node {
 public:
 	std::vector<std::vector<int>> board;
@@ -36,8 +36,10 @@ public:
 	void genChildren();	// generate all posible child and store it in child list
 	void genSteps(int, int);	// generate all posible steps of a piece
 	void hop(int, int);
+	void setVal(bool is_black); // set value
 	void calChildVal(bool is_black);
 	void sortChildVal(bool is_max);
+	bool isLeaf();
 };
 
 struct HopNode {

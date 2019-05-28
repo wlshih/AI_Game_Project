@@ -3,8 +3,6 @@
 static Timer t;
 
 int Node::utilityFunction(bool is_black) {
-	getWhite();
-	getBlack();
 	int score = 0;
 	int black_cnt = 0;
 	int white_cnt = 0;
@@ -27,8 +25,16 @@ int Node::utilityFunction(bool is_black) {
 	return score;
 }
 int Node::evaluationFunction(bool is_black){
-	getWhite();
-	getBlack();
+
+	//////////////////////////////////////////////////////////////////////////////////////
+	// How to get score                                                                 //
+	//                                                                                  //
+	// (1)Get in green zone, get  100								                    //
+	// (2)moving forward but stil not get in green zone, get  10                        //
+	// (3)eat enemy, get  10                                                            //
+	// (4)get close to left side(for Black: row 0,1,2 ; for White row 5,6,7), get  5    //
+	//////////////////////////////////////////////////////////////////////////////////////
+
 	int score = 0;
 	const int goal_score = 100;
 	const int moving_forward_score = 10;
@@ -66,6 +72,7 @@ int Node::evaluationFunction(bool is_black){
 	return score;
 }
 
+// set leaf and return is terminal or not
 bool Node::terminal() {
 	//Case 1: black, white all has pawn(s) on the board
 	if (this->white.size() > 0 && this->black.size() > 0) {
@@ -81,7 +88,7 @@ bool Node::terminal() {
 				if (board[i][j] == 2) white_win = false;
 			}
 		}
-		return (white_win || black_win);
+		this->leaf = (white_win || black_win);
 	}
 	//Case 2: white has pawn(s) on the board, black don't have any pawn
 	else if (this->white.size() > 0 && this->black.size() == 0) {
@@ -91,7 +98,7 @@ bool Node::terminal() {
 				if (board[i][j] == 2) white_win = false;
 			}
 		}
-		return white_win;
+		this->leaf = white_win;
 	}
 	//Case 3: black has pawn(s) on the board, white don't have any pawn
 	else if (this->black.size() > 0 && this->white.size() == 0) {
@@ -101,10 +108,12 @@ bool Node::terminal() {
 				if (board[i][j] == 1) black_win = false;
 			}
 		}
-		return black_win;
+		this->leaf = black_win;
 	}
 	//case 4: Either black or white don't have any pawn on the board.
 	//This case will never happen.
+
+	return this->leaf;
 }
 
 void Node::getBlack() {
@@ -145,11 +154,6 @@ void Node::getWhite() {
 
 // generate all children of next step
 void Node::genChildren() {
-	// check timer
-	//if (t.timeUp()) return;
-	//printf("genChildren%d,%d\n", black.size(), white.size());
-	//getWhite();
-	//getBlack();
 	if(color == 1) { // black
 		for(int i=0; i<black.size(); i++) {
 			genSteps(black[i].first, black[i].second);
@@ -171,9 +175,7 @@ void Node::genChildren() {
 // generate all posible steps of a piece and store to list
 // move/hop up + down + left + right
 void Node::genSteps(int r, int c) {
-	// check timer
-	//if (t.timeUp()) return;
-
+	hop(r, c);
 	// move up
 	//printf("genSteps\n");
 	if((r-1) >= 0 && board[r-1][c] == 0) {
@@ -239,8 +241,6 @@ void Node::genSteps(int r, int c) {
 
 		child.push_back(n);
 	}
-
-	hop(r, c);
 	//printf("******\n");
 	//printBoard(this);
 }
@@ -385,39 +385,52 @@ void Node::hop(int r, int c) {
 	//printf("child_list size:%d\n", child.size());
 }
 
-void Node::sortChildVal(bool is_max) {
-	if (is_max) std::sort(this->child.begin(), this->child.end(), cmpMax);
-	else std::sort(this->child.begin(), this->child.end(), cmpMin);
-
-	/*printf("child# %d\n", child.size());
-	for (int i = 0; i < child.size(); i++) {
-		printf("%d ", child[i]->val);
+void Node::setVal(bool is_black) {
+	getBlack();
+	getWhite();
+	if (terminal()) {
+		val = utilityFunction(is_black);
 	}
-	printf("\n");*/
+	else {
+		val = evaluationFunction(is_black);
+	}
 }
+
 
 void Node::calChildVal(bool is_black) {
 	std::vector<Node*>::iterator itr;
 	for (itr = this->child.begin(); itr != child.end(); itr++) {
-		if ((*itr)->terminal()) {
-			(*itr)->utilityFunction(is_black);
-		}
-		else {
-			(*itr)->evaluationFunction(is_black);
-		}
+		(*itr)->setVal(is_black);
 	}
 }
 
+void Node::sortChildVal(bool is_max) {
+	if (is_max) std::sort(this->child.begin(), this->child.end(), cmpMax);
+	else std::sort(this->child.begin(), this->child.end(), cmpMin);
+}
+
+bool Node::isLeaf() {
+	return this->leaf;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//                                class Minimax                                         //
+//////////////////////////////////////////////////////////////////////////////////////////
+
 // set root
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
+	printf("<---6--->\n");
 	t.setTime(Time_lim);
 
 	root = Node(state);
 	root.color = (is_black) ? 1 : 2;
-	if (root.terminal()) root.val = root.utilityFunction(is_black);
-	else root.val = root.evaluationFunction(is_black);
+
+	root.setVal(is_black);
+	printf("root val:%d\n", root.val);
+
 	int max_val = maxVal(&root, INT_MIN, INT_MAX);
 	printf("child #:%d\n", root.child.size());
+
 	std::vector<Node*>::iterator it;
 	for(it=root.child.begin(); it!=root.child.end(); it++) {
 		printf("%d ", (*it)->val);
@@ -427,18 +440,16 @@ void Minimax::buildTree(std::vector<std::vector<int>> state) {
 	}
 	///
 	printf("\nmax_val:%d\n", max_val);
+	printf("Timer: %fs\n", t.getElapsed());
 	//printBoard(&root);
 }
 
 int Minimax::maxVal(Node *n, int alpha, int beta) {
-	if (n->terminal()) {
+	if (n->isLeaf() || cutoff_test(n) || t.timeUp()) {
 		return n->val;
 	}
-	if (cutoff_test(n)) {
-		return n->val;
-	}
-	n->genChildren();
 
+	n->genChildren();
 	// ordering
 	n->calChildVal(this->is_black);
 	n->sortChildVal(true);
@@ -452,19 +463,16 @@ int Minimax::maxVal(Node *n, int alpha, int beta) {
 		}
 		alpha = std::max(value, alpha);
 	}
-	n->val = value; // store to node
+	n->val = value; // store(update) to node
 	//printf("maxValue:%d\n", value);
 	return value;
 }
 int Minimax::minVal(Node *n, int alpha, int beta) {
-	if (n->terminal()) {
+	if (n->isLeaf() || cutoff_test(n) || t.timeUp()) {
 		return n->val;
 	}
-	if (cutoff_test(n)) {
-		return n->val;
-	}
-	n->genChildren();
 
+	n->genChildren();
 	// ordering
 	n->calChildVal(this->is_black);
 	n->sortChildVal(false);
@@ -478,54 +486,11 @@ int Minimax::minVal(Node *n, int alpha, int beta) {
 		}
 		beta = std::min(value, beta);
 	}
-	n->val = value; // store to node
+	n->val = value; // store(update) to node
 	//printf("minValue:%d\n", value);
 	return value;
 }
-/*
-int Minimax::maxVal(Node *n, int alpha, int beta) {
-	if (n->terminal()) {
-		return n->utilityFunction(this->is_black);
-	}
-	if (cutoff_test(n)) {
-		return n->evaluationFunction(this->is_black);
-	}
-	n->genChildren();
-	int value = INT_MIN;
-	for (int i = 0; i < n->child.size(); i++) {
-		value = std::max(value, minVal(n->child[i], alpha, beta));
-		if (value >= beta) {
-			n->val = value;
-			return value;
-		}
-		alpha = std::max(value, alpha);
-	}
-	n->val = value; // store to node
-	//printf("maxValue:%d\n", value);
-	return value;
-}
-int Minimax::minVal(Node *n, int alpha, int beta) {
-	if (n->terminal()) {
-		return n->utilityFunction(this->is_black);
-	}
-	if (cutoff_test(n)) {
-		return n->evaluationFunction(this->is_black);
-	}
-	n->genChildren();
-	int value = INT_MAX;
-	for (int i = 0; i < n->child.size(); i++) {
-		value = std::min(value, maxVal(n->child[i], alpha, beta));
-		if (value <= alpha) {
-			n->val = value;
-			return value;
-		}
-		beta = std::min(value, beta);
-	}
-	n->val = value; // store to node
-	//printf("minValue:%d\n", value);
-	return value;
-}
-*/
+
 bool Minimax::cutoff_test(Node *n) {
 	return (n->depth >= Depth) ? true : false;
 }
@@ -578,6 +543,10 @@ std::vector<std::vector<int>> testBoard() {
 	ret[7][7] = 2; ret[5][7] = 2; ret[3][7] = 2; ret[1][7] = 2;
 	ret[6][6] = 2; ret[4][6] = 2; ret[2][6] = 2;
 	ret[5][5] = 2; ret[3][5] = 2;
+	/*ret[0][0] = 1; ret[2][0] = 1; ret[4][0] = 1; ret[6][0] = 1;
+	ret[1][1] = 1; ret[3][1] = 1; ret[5][1] = 1;
+	ret[2][2] = 1; ret[4][2] = 1;
+	ret[1][0] = 2; ret[5][7] = 2;*/
 	return ret;
 }
 void printBoard(Node* n) {
@@ -591,7 +560,7 @@ void printBoard(Node* n) {
 	printf("- - - - - - - - -\n");
 }
 void Minimax::printStep() {
-	printf("steplist#:%d\n", step_list.size());
+	printf("steplist: ");
 	std::vector<std::vector<int>>::iterator it;
 	for(it=step_list.begin(); it!=step_list.end(); it++) {
 		printf("(%d, %d) ", (*it)[0], (*it)[1]);
