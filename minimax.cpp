@@ -1,66 +1,110 @@
 #include "minimax.h"
 
+static Timer t;
+
 int Node::utilityFunction(bool is_black) {
+	getWhite();
+	getBlack();
 	int score = 0;
-	if (is_black) {
-		if (black[0].first >= 6) score = INT_MAX;
-		else score = INT_MIN;	
+	int black_cnt = 0;
+	int white_cnt = 0;
+
+	std::vector<std::pair<int, int>>::iterator it;
+	for (it = black.begin(); it != black.end(); it++) {
+		if ((*it).second >= 6) black_cnt++;
 	}
-	else {
-		if (white[0].first <= 1) score = INT_MAX;
-		else score = INT_MIN;
+	for (it = white.begin(); it != white.end(); it++) {
+		if ((*it).second <= 1) white_cnt++;
 	}
-	val = score; // store to node
+
+	// compare number of pieces in the green area
+	if (black_cnt > white_cnt) score = (is_black) ? INT_MAX : INT_MIN;
+	else if (black_cnt < white_cnt) score = (is_black) ? INT_MIN : INT_MAX;
+	else score = 0;
+
+	this->val = score; // store to node
 	//printf("Uscore:%d\n", val);
 	return score;
 }
 int Node::evaluationFunction(bool is_black){
+	getWhite();
+	getBlack();
 	int score = 0;
-	if(is_black){
-		for(int i=0;i<black.size();i++){
-			if(black[i].second <= 4){score+=black[i].second;}
-			else{score+=10;}
+	const int goal_score = 100;
+	const int moving_forward_score = 10;
+	const int eat_score = 10;
+	const int left_score = 5;
+	// playing as Black
+	if (is_black) {
+		for (int i = 0; i < black.size(); i++) {
+			if (black[i].second <= 5) { score += black[i].second*moving_forward_score; }
+			else { score += goal_score; }
+			if (black[i].first <= 2) { score += left_score; }
 		}
-		for(int i=0;i<white.size();i++){
-			if(white[i].second >= 3){score-=(7-white[i].second);}
-			else{score-=10;}
+		for (int i = 0; i < white.size(); i++) {
+			if (white[i].second >= 2) { score -= (7 - white[i].second)*moving_forward_score; }
+			else { score -= goal_score; }
+			if (white[i].first >= 5) { score -= left_score; }
 		}
-		(black.size()-white.size())*5;
+		score += (black.size() - white.size()) * eat_score;
 	}
-	else{
-		for(int i=0;i<black.size();i++){
-			if(black[i].second <= 4){score-=black[i].second;}
-			else{score-=10;}
+	// playing as White
+	else {
+		for (int i = 0; i < black.size(); i++) {
+			if (black[i].second <= 5) { score -= black[i].second*moving_forward_score; }
+			else { score -= goal_score; }
+			if (black[i].first <= 2) { score -= left_score; }
 		}
-		for(int i=0;i<white.size();i++){
-			if(white[i].second >= 3){score+=(7-white[i].second);}
-			else{score+=10;}
+		for (int i = 0; i < white.size(); i++) {
+			if (white[i].second >= 2) { score += (7 - white[i].second)*moving_forward_score; }
+			else { score += goal_score; }
+			if (white[i].first <= 2) { score -= left_score; }
 		}
-		(white.size()-black.size())*5;
+		score += (white.size() - black.size()) * eat_score;
 	}
-	val = score; // store to node
-	//printf("Escore:%d\n", val);
+	this->val = score; // store evluation value to node
 	return score;
 }
 
 bool Node::terminal() {
-	if (this->white.size() == 0 || this->black.size() == 0)
-		return false;
-
-	bool white = 1; // if all whites are in left green area
-	bool black = 1; // if all blacks are in right green area
-	for(int i=0; i<8; i++) {
-		for(int j=0; j<6; j++) {
-			if(board[i][j] == 1) black = 0;
+	//Case 1: black, white all has pawn(s) on the board
+	if (this->white.size() > 0 && this->black.size() > 0) {
+		bool white_win = true; // if all whites are in left green area
+		bool black_win = true; // if all blacks are in right green area
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 6; j++) {
+				if (board[i][j] == 1) black_win = false;
+			}
 		}
-	}
-	for(int i=0; i<8; i++) {
-		for(int j=2; j<8; j++) {
-			if(board[i][j] == 2) white = 0;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 2; j < 8; j++) {
+				if (board[i][j] == 2) white_win = false;
+			}
 		}
+		return (white_win || black_win);
 	}
-
-	return (white || black);
+	//Case 2: white has pawn(s) on the board, black don't have any pawn
+	else if (this->white.size() > 0 && this->black.size() == 0) {
+		bool white_win = true;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 2; j < 8; j++) {
+				if (board[i][j] == 2) white_win = false;
+			}
+		}
+		return white_win;
+	}
+	//Case 3: black has pawn(s) on the board, white don't have any pawn
+	else if (this->black.size() > 0 && this->white.size() == 0) {
+		bool black_win = true;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 6; j++) {
+				if (board[i][j] == 1) black_win = false;
+			}
+		}
+		return black_win;
+	}
+	//case 4: Either black or white don't have any pawn on the board.
+	//This case will never happen.
 }
 
 void Node::getBlack() {
@@ -101,7 +145,11 @@ void Node::getWhite() {
 
 // generate all children of next step
 void Node::genChildren() {
+	// check timer
+	//if (t.timeUp()) return;
 	//printf("genChildren%d,%d\n", black.size(), white.size());
+	//getWhite();
+	//getBlack();
 	if(color == 1) { // black
 		for(int i=0; i<black.size(); i++) {
 			genSteps(black[i].first, black[i].second);
@@ -123,6 +171,9 @@ void Node::genChildren() {
 // generate all posible steps of a piece and store to list
 // move/hop up + down + left + right
 void Node::genSteps(int r, int c) {
+	// check timer
+	//if (t.timeUp()) return;
+
 	// move up
 	//printf("genSteps\n");
 	if((r-1) >= 0 && board[r-1][c] == 0) {
@@ -192,83 +243,6 @@ void Node::genSteps(int r, int c) {
 	hop(r, c);
 	//printf("******\n");
 	//printBoard(this);
-
-	/*// hop up
-	if((r-2) >= 0 && board[r-1][c] != 0 && board[r-2][c] == 0) {
-		Node* n = new Node(board);
-		n->board[r][c] = 0;
-		n->board[r-2][c] = color;
-		n->board[r-1][c] = (n->board[r-1][c] == color) ? color : 0; // eat
-
-		std::vector<int> pos = {r, c};
-		n->step.push_back(pos);
-		pos[0] -= 2;
-		n->step.push_back(pos);
- 
-		n->color = (color == 1) ? 2 : 1;
-		n->depth = depth + 1;
-
-		child.push_back(n);
-
-		hop(r-2, c);
-	}
-	// hop down
-	if((r+2) <= 7 && board[r+1][c] != 0 && board[r+2][c] == 0) {
-		Node* n = new Node(board);
-		n->board[r][c] = 0;
-		n->board[r+2][c] = color;
-		n->board[r+1][c] = (n->board[r+1][c] == color) ? color : 0; // eat
-
-		std::vector<int> pos = {r, c};
-		n->step.push_back(pos);
-		pos[0] += 2;
-		n->step.push_back(pos);
- 
-		n->color = (color == 1) ? 2 : 1;
-		n->depth = depth + 1;
-
-		child.push_back(n);
-
-		hop(r+2, c);
-	}
-	// hop left
-	if((c-2) >= 0 && board[r][c-1] != 0 && board[r][c-2] == 0) {
-		Node* n = new Node(board);
-		n->board[r][c] = 0;
-		n->board[r][c-2] = color;
-		n->board[r][c-1] = (n->board[r][c-1] == color) ? color : 0; // eat
-
-		std::vector<int> pos = {r, c};
-		n->step.push_back(pos);
-		pos[1] -= 2;
-		n->step.push_back(pos);
- 
-		n->color = (color == 1) ? 2 : 1;
-		n->depth = depth + 1;
-
-		child.push_back(n);
-
-		hop(r, c-2);
-	}
-	// hop right
-	if((c+2) >= 0 && board[r][c+1] != 0 && board[r][c+2] == 0) {
-		Node* n = new Node(board);
-		n->board[r][c] = 0;
-		n->board[r][c+2] = color;
-		n->board[r][c+2] = (n->board[r][c+1] == color) ? color : 0; // eat
-
-		std::vector<int> pos = {r, c};
-		n->step.push_back(pos);
-		pos[1] += 2;
-		n->step.push_back(pos);
- 
-		n->color = (color == 1) ? 2 : 1;
-		n->depth = depth + 1;
-
-		child.push_back(n);
-
-		hop(r, c+2, n);
-	}*/
 }
 
 void Node::hop(int r, int c) {
@@ -303,12 +277,13 @@ void Node::hop(int r, int c) {
 		hop_node_stack.pop();
 
 		// but check the hop count, don't expand if reached the max
-		if (cnt >= Hop_max) continue;
+		// also check the timer
+		if (cnt >= Hop_max || t.timeUp()) break;
 
 		// expand hop range
 		// test if hop up is ok
 		if (curR - 2 >= 0 && board[curR - 1][curC] != 0 && board[curR - 2][curC] == 0
-			&& ((curR - 2) != preR && curC != preC)) {
+			&& ((curR - 2) != preR && curC != preC) && !t.timeUp()) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
@@ -333,7 +308,7 @@ void Node::hop(int r, int c) {
 
 		// test if hop down is ok
 		if ((curR + 2) <= 7 && board[curR + 1][curC] != 0 && board[curR + 2][curC] == 0
-			&& ((curR + 2) != preR && curC != preC)) {
+			&& ((curR + 2) != preR && curC != preC) && !t.timeUp()) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
@@ -358,7 +333,7 @@ void Node::hop(int r, int c) {
 
 		// test if hop left is ok
 		if (curC - 2 >= 0 && board[curR][curC - 1] != 0 && board[curR][curC - 2] == 0
-			&& (curR != preR && (curC - 2) != preC)) {
+			&& (curR != preR && (curC - 2) != preC) && !t.timeUp()) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
@@ -383,7 +358,7 @@ void Node::hop(int r, int c) {
 
 		// test if hop right is ok
 		if (curC + 2 <= 7 && board[curR][curC + 1] != 0 && board[curR][curC + 2] == 0
-			&& (curR != preR && (curC + 2) != preC)) {
+			&& (curR != preR && (curC + 2) != preC) && !t.timeUp()) {
 			//assigne value to temp from current
 			tempBoard = curBoard;
 			tempStep = curStep;
@@ -410,9 +385,37 @@ void Node::hop(int r, int c) {
 	//printf("child_list size:%d\n", child.size());
 }
 
+void Node::sortChildVal(bool is_max) {
+	if (is_max) std::sort(this->child.begin(), this->child.end(), cmpMax);
+	else std::sort(this->child.begin(), this->child.end(), cmpMin);
+
+	/*printf("child# %d\n", child.size());
+	for (int i = 0; i < child.size(); i++) {
+		printf("%d ", child[i]->val);
+	}
+	printf("\n");*/
+}
+
+void Node::calChildVal(bool is_black) {
+	std::vector<Node*>::iterator itr;
+	for (itr = this->child.begin(); itr != child.end(); itr++) {
+		if ((*itr)->terminal()) {
+			(*itr)->utilityFunction(is_black);
+		}
+		else {
+			(*itr)->evaluationFunction(is_black);
+		}
+	}
+}
+
+// set root
 void Minimax::buildTree(std::vector<std::vector<int>> state) {
+	t.setTime(Time_lim);
+
 	root = Node(state);
 	root.color = (is_black) ? 1 : 2;
+	if (root.terminal()) root.val = root.utilityFunction(is_black);
+	else root.val = root.evaluationFunction(is_black);
 	int max_val = maxVal(&root, INT_MIN, INT_MAX);
 	printf("child #:%d\n", root.child.size());
 	std::vector<Node*>::iterator it;
@@ -428,13 +431,64 @@ void Minimax::buildTree(std::vector<std::vector<int>> state) {
 }
 
 int Minimax::maxVal(Node *n, int alpha, int beta) {
-	n->getBlack();
-	n->getWhite();
-	if (n->terminal()) { 
-		return n->utilityFunction(is_black);;
+	if (n->terminal()) {
+		return n->val;
 	}
 	if (cutoff_test(n)) {
-		return n->evaluationFunction(is_black);
+		return n->val;
+	}
+	n->genChildren();
+
+	// ordering
+	n->calChildVal(this->is_black);
+	n->sortChildVal(true);
+
+	int value = INT_MIN;
+	for (int i = 0; i < n->child.size(); i++) {
+		value = std::max(value, minVal(n->child[i], alpha, beta));
+		if (value >= beta) {
+			n->val = value;
+			return value;
+		}
+		alpha = std::max(value, alpha);
+	}
+	n->val = value; // store to node
+	//printf("maxValue:%d\n", value);
+	return value;
+}
+int Minimax::minVal(Node *n, int alpha, int beta) {
+	if (n->terminal()) {
+		return n->val;
+	}
+	if (cutoff_test(n)) {
+		return n->val;
+	}
+	n->genChildren();
+
+	// ordering
+	n->calChildVal(this->is_black);
+	n->sortChildVal(false);
+
+	int value = INT_MAX;
+	for (int i = 0; i < n->child.size(); i++) {
+		value = std::min(value, maxVal(n->child[i], alpha, beta));
+		if (value <= alpha) {
+			n->val = value;
+			return value;
+		}
+		beta = std::min(value, beta);
+	}
+	n->val = value; // store to node
+	//printf("minValue:%d\n", value);
+	return value;
+}
+/*
+int Minimax::maxVal(Node *n, int alpha, int beta) {
+	if (n->terminal()) {
+		return n->utilityFunction(this->is_black);
+	}
+	if (cutoff_test(n)) {
+		return n->evaluationFunction(this->is_black);
 	}
 	n->genChildren();
 	int value = INT_MIN;
@@ -451,13 +505,11 @@ int Minimax::maxVal(Node *n, int alpha, int beta) {
 	return value;
 }
 int Minimax::minVal(Node *n, int alpha, int beta) {
-	n->getBlack();
-	n->getWhite();
 	if (n->terminal()) {
-		return n->utilityFunction(is_black);;
+		return n->utilityFunction(this->is_black);
 	}
 	if (cutoff_test(n)) {
-		return n->evaluationFunction(is_black);
+		return n->evaluationFunction(this->is_black);
 	}
 	n->genChildren();
 	int value = INT_MAX;
@@ -473,7 +525,7 @@ int Minimax::minVal(Node *n, int alpha, int beta) {
 	//printf("minValue:%d\n", value);
 	return value;
 }
-
+*/
 bool Minimax::cutoff_test(Node *n) {
 	return (n->depth >= Depth) ? true : false;
 }
@@ -482,6 +534,35 @@ std::vector<std::vector<int>> Minimax::getSteplist() {
 	return step_list;
 }
 
+// release memory
+void Minimax::releaseTree() {
+	std::vector<Node*>::iterator it;
+	for (it = root.child.begin(); it != root.child.end(); it++) {
+		delete (*it);
+	}
+}
+
+void Minimax::releaseChild(Node* n) {
+	if (n->child.size() == 0) delete n;
+	else {
+		std::vector<Node*>::iterator it;
+		for (it = n->child.begin(); it != n->child.end(); it++) {
+			releaseChild(*it);
+		}
+		delete (*it);
+	}
+}
+	
+
+// sort value from low to high
+bool cmpMin(Node* n1, Node* n2) {
+	return (n1->val < n2->val);
+}
+
+// sort value from high to low
+bool cmpMax(Node* n1, Node *n2) {
+	return (n1->val > n2->val);
+}
 
 /****** for debugging ******/
 

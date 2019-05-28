@@ -4,9 +4,11 @@
 #include <climits>
 #include <iostream>
 #include <stack>
+#include "timer.h"
 
-constexpr auto Depth = 3;
+constexpr auto Depth = 2;
 constexpr auto Hop_max = 4;
+constexpr auto Time_lim = 4.5;
 class Node {
 public:
 	std::vector<std::vector<int>> board;
@@ -16,13 +18,15 @@ public:
 	int color; // 0: undefined, 1: black, 2: white
 	int depth; // root == 0
 	int val;
+	bool leaf;
 public:
-	Node() : color(0), depth(0), val(0) {}
+	Node() : color(0), depth(0), val(0), leaf(0) {}
 	Node(std::vector<std::vector<int>> state) {
 		board = state;
 		color = 0;
 		depth = 0;
 		val = 0;
+		leaf = 0;
 	}
 	int utilityFunction(bool is_black);
 	int evaluationFunction(bool is_black);
@@ -32,6 +36,8 @@ public:
 	void genChildren();	// generate all posible child and store it in child list
 	void genSteps(int, int);	// generate all posible steps of a piece
 	void hop(int, int);
+	void calChildVal(bool is_black);
+	void sortChildVal(bool is_max);
 };
 
 struct HopNode {
@@ -61,9 +67,13 @@ public:
 	int minVal(Node* n, int alpha, int beta);
 	bool cutoff_test(Node* n);
 	std::vector<std::vector<int>> getSteplist();
+	void releaseTree();
+	void releaseChild(Node* n);
 	void printStep(); // debug
 };
 
+bool cmpMin(Node* n1, Node* n2);
+bool cmpMax(Node* n1, Node* n2);
 
 /****** for debugging ******/
 std::vector<std::vector<int>> testBoard();
